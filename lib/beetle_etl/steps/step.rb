@@ -1,7 +1,5 @@
 module BeetleETL
-
   class Step
-
     attr_reader :table_name
 
     def initialize(config, table_name)
@@ -37,5 +35,12 @@ module BeetleETL
       BeetleETL::Naming.stage_table_name(external_source, table_name || @table_name)
     end
 
+    def mappings_table_name(table_name = nil)
+      BeetleETL::Naming.mappings_table_name(table_name || @table_name)
+    end
+
+    def mapped_foreign_key_column(table_name = nil)
+      BeetleETL::Naming.mapped_foreign_key_column(table_name || @table_name)
+    end
   end
 end

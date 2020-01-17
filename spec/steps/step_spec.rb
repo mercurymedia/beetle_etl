@@ -2,7 +2,6 @@ require 'spec_helper'
 
 module BeetleETL
   describe Step do
-
     let(:config) { OpenStruct.new }
 
     subject { Step.new(config, :example_table) }
@@ -34,5 +33,16 @@ module BeetleETL
       end
     end
 
+    describe '#mappings_table_name' do
+      it 'returns the name of the external mappings table' do
+        expect(subject.mappings_table_name('examples')).to eq('example_external_system_mappings')
+      end
+    end
+
+    describe '#mapped_foreign_key_column' do
+      it 'returns the name of the foreign key column related to the mapped table' do
+        expect(subject.mapped_foreign_key_column('examples')).to eq('example_id')
+      end
+    end
   end
 end
