@@ -42,5 +42,17 @@ module BeetleETL
     def mapped_foreign_key_column(table_name = nil)
       BeetleETL::Naming.mapped_foreign_key_column(table_name || @table_name)
     end
+
+    def unique_fields(table_name)
+      BeetleETL::UniquenessControl.unique_fields(table_name)
+    end
+
+    def unique_fields_join_filter(table_name, equal)
+      BeetleETL::UniquenessControl.unique_fields_join_filter(table_name, equal)
+    end
+
+    def unique_fields_where_filter(table_name, allow_null)
+      BeetleETL::UniquenessControl.unique_fields_where_filter(table_name, allow_null)
+    end
   end
 end

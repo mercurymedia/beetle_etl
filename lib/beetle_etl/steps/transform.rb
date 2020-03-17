@@ -1,6 +1,5 @@
 module BeetleETL
   class Transform < Step
-
     def initialize(config, table_name, dependencies, query)
       super(config, table_name)
       @dependencies = dependencies
@@ -14,7 +13,5 @@ module BeetleETL
     def run
       database.execute(@query)
     end
-
   end
 end
-

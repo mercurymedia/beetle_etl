@@ -18,6 +18,13 @@ module ExampleSchema
       String :Adresse, size: 255
       String :Abteilung, size: 255
     end
+
+    test_database.create_table Sequel.qualify('source', 'Client') do
+      Integer :pkCliId
+      String :Name, size: 255
+      String :Land, size: 255
+      String :Adresse, size: 255
+    end
   end
 
   def drop_source_tables
@@ -49,6 +56,18 @@ module ExampleSchema
       DateTime :deleted_at
     end
 
+    test_database.create_table Sequel.qualify('my_target', 'clients') do
+      primary_key :id
+      String :name, size: 255
+      String :country_code, size: 255
+      String :address, size: 255
+      String :external_id, size: 255
+      String :external_source, size: 255
+      DateTime :created_at
+      DateTime :updated_at
+      DateTime :deleted_at
+    end
+
     test_database.create_table Sequel.qualify('my_target', 'external_systems') do
       Integer :id
       String :name, size: 255
@@ -61,6 +80,7 @@ module ExampleSchema
       Integer :external_system_id
       DateTime :updated_at
       DateTime :created_at
+      DateTime :deleted_at
     end
 
     test_database.create_table Sequel.qualify('my_target', 'organisation_external_system_mappings') do
@@ -70,6 +90,17 @@ module ExampleSchema
       Integer :external_system_id
       DateTime :updated_at
       DateTime :created_at
+      DateTime :deleted_at
+    end
+
+    test_database.create_table Sequel.qualify('my_target', 'client_external_system_mappings') do
+      primary_key :id
+      String :external_id, size: 255
+      Integer :client_id
+      Integer :external_system_id
+      DateTime :updated_at
+      DateTime :created_at
+      DateTime :deleted_at
     end
   end
 

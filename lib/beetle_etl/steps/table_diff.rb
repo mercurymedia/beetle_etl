@@ -3,6 +3,7 @@ module BeetleETL
     IMPORTER_COLUMNS = %i[
       external_id
       transition
+      mapped_foreign_id
     ].freeze
 
     def dependencies
@@ -10,8 +11,34 @@ module BeetleETL
     end
 
     def run
-      %w[create update delete reinstate keep].each do |transition|
+      %w[create update delete reinstate keep create_mapping].each do |transition|
         public_send(:"transition_#{transition}")
+      end
+    end
+
+    def transition_create_mapping
+      if unique_fields(table_name)
+        database.execute <<-SQL
+          UPDATE "#{target_schema}"."#{stage_table_name}" stage_update
+          SET
+            transition = 'CREATE_MAPPING',
+            id = NEXTVAL('#{target_schema}.#{table_name}_id_seq'),
+            mapped_foreign_id = target.id
+          FROM "#{target_schema}"."#{stage_table_name}" stage
+          LEFT JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+            mapping.external_id = stage.external_id
+          )
+          LEFT JOIN "#{target_schema}"."external_systems" AS external_system ON (
+            external_system.name = '#{external_source}'
+            AND mapping.external_system_id = external_system.id
+          )
+          LEFT JOIN "#{target_schema}"."#{table_name}" AS target ON (
+            #{unique_fields_join_filter(table_name, true)}
+          )
+          WHERE stage_update.external_id = stage.external_id
+            AND mapping.external_id IS NULL
+            #{unique_fields_where_filter(table_name, false)}
+        SQL
       end
     end
 
@@ -43,6 +70,7 @@ module BeetleETL
         FROM "#{target_schema}"."#{stage_table_name}" stage
         JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
           mapping.external_id = stage.external_id
+          AND mapping.deleted_at IS NULL
         )
         JOIN "#{target_schema}"."external_systems" AS external_system ON (
           external_system.name = '#{external_source}'
@@ -61,6 +89,14 @@ module BeetleETL
     end
 
     def transition_delete
+      uniqueness_control_extra_filter = if unique_fields(table_name)
+        <<-SQL
+          OR (#{unique_fields_join_filter(table_name, true)})
+        SQL
+      else
+        ''
+      end
+
       database.execute <<~SQL
         INSERT INTO "#{target_schema}"."#{stage_table_name}"
           (transition, id)
@@ -77,6 +113,7 @@ module BeetleETL
           )
           LEFT OUTER JOIN "#{target_schema}"."#{stage_table_name}" AS stage ON (
             stage.external_id = mapping.external_id
+            #{uniqueness_control_extra_filter}
           )
           WHERE stage.external_id IS NULL
           AND target.deleted_at IS NULL
@@ -118,6 +155,7 @@ module BeetleETL
         JOIN "#{target_schema}"."external_systems" AS external_system ON (
           external_system.name = '#{external_source}'
           AND mapping.external_system_id = external_system.id
+          AND mapping.deleted_at IS NULL
         )
         JOIN "#{target_schema}"."#{table_name}" target ON (
           target.id = mapping."#{mapped_foreign_key_column}"

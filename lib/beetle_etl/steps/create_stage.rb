@@ -1,10 +1,8 @@
 module BeetleETL
-
   ColumnDefinitionNotFoundError = Class.new(StandardError)
   NoColumnsDefinedError = Class.new(StandardError)
 
   class CreateStage < Step
-
     def initialize(config, table_name, relations, column_names)
       super(config, table_name)
       @relations = relations
@@ -17,6 +15,7 @@ module BeetleETL
           id integer,
           external_id character varying(255),
           transition character varying(255),
+          mapped_foreign_id integer,
 
           #{column_definitions}
         );
@@ -42,7 +41,7 @@ module BeetleETL
       ].flatten
 
       if definitions.empty?
-        raise NoColumnsDefinedError.new <<-MSG
+        raise NoColumnsDefinedError, <<-MSG
           Transformation for #{table_name} has no column definitions.
           Either add an array of columns or references to other tables.
         MSG
@@ -69,21 +68,20 @@ module BeetleETL
     def index_definitions
       index_columns = [:external_id] + @relations.keys.map { |c| "external_#{c}" }
       index_columns.map do |column_name|
-        %Q[CREATE INDEX ON "#{target_schema}"."#{stage_table_name}" (#{column_name});]
-      end.join(";")
+        %[CREATE INDEX ON "#{target_schema}"."#{stage_table_name}" (#{column_name});]
+      end.join(';')
     end
 
     def column_type(column_name)
       @column_types ||= database.column_types(target_schema, table_name)
 
-      unless @column_types.has_key?(column_name)
-        raise ColumnDefinitionNotFoundError.new <<-MSG
+      unless @column_types.key?(column_name)
+        raise ColumnDefinitionNotFoundError, <<-MSG
           Table "#{table_name}" has no column "#{column_name}".
         MSG
       end
 
       @column_types[column_name]
     end
-
   end
 end

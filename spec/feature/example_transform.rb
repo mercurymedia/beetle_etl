@@ -4,6 +4,27 @@ helpers do
   end
 end
 
+import :clients do
+  columns :name, :country_code, :address
+
+  query <<-SQL
+    INSERT INTO #{stage_table} (
+      external_id,
+      name,
+      country_code,
+      address
+    )
+
+    SELECT
+      c."pkCliId",
+      c."Name",
+      c."Land",
+      c."Adresse"
+
+    FROM #{source_schema_helper}."Client" c
+  SQL
+end
+
 import :organisations do
   columns :name, :address
 

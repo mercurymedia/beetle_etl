@@ -13,6 +13,7 @@ module BeetleETL
   require 'beetle_etl/dsl/transformation_loader'
 
   require 'beetle_etl/naming'
+  require 'beetle_etl/uniqueness_control'
 
   require 'beetle_etl/steps/step'
   require 'beetle_etl/steps/create_stage'

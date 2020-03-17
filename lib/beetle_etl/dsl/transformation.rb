@@ -2,7 +2,6 @@ require 'set'
 
 module BeetleETL
   class Transformation
-
     attr_reader :table_name
 
     def initialize(config, table_name, setup, helpers = nil)
@@ -28,6 +27,5 @@ module BeetleETL
     def query
       @parsed.query_strings.join(';')
     end
-
   end
 end

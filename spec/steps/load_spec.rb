@@ -27,11 +27,13 @@ module BeetleETL
         Integer :id
         String :external_id, size: 255
         String :transition, size: 20
+        Integer :mapped_foreign_id
 
         String :external_foo_id, size: 255
         Integer :foo_id
 
         String :payload, size: 255
+        String :unique_field, size: 255
       end
 
       test_database.create_table(:example_table) do
@@ -45,6 +47,7 @@ module BeetleETL
         String :payload, size: 255
         String :ignored_attribute, size: 255
         Integer :foo_id
+        String :unique_field, size: 255
       end
 
       test_database.create_table(:external_systems) do
@@ -59,6 +62,7 @@ module BeetleETL
         Integer :external_system_id
         DateTime :created_at
         DateTime :updated_at
+        DateTime :deleted_at
       end
 
       insert_into(:external_systems).values(
@@ -86,7 +90,7 @@ module BeetleETL
 
     describe '#run' do
       it 'runs all load steps' do
-        %w[create update delete].each do |transition|
+        %w[create update delete create_mapping].each do |transition|
           expect(subject).to receive(:"load_#{transition}")
         end
 
@@ -114,6 +118,50 @@ module BeetleETL
           [:external_id, :example_table_id, :external_system_id, :created_at, :updated_at],
           ['external_id-1', 3, 1, now, now],
           ['external_id-2', 4, 1, now, now]
+        )
+      end
+    end
+
+    describe '#load_create_mapping' do
+      before do
+        stub_const(
+          'BeetleETL::UniquenessControl::WITH_UNIQUE_FIELDS',
+          example_table: %w[unique_field]
+        )
+      end
+
+      it 'loads mappings into the target table, deletes old mappings if any, and reinstate the record if 
+      necessary' do
+        insert_into(:example_table).values(
+          [:id, :updated_at, :deleted_at],
+          [3, yesterday, yesterday]
+        )
+
+        insert_into(subject.stage_table_name.to_sym).values(
+          [:id, :mapped_foreign_id, :external_id, :transition],
+          [3, 1, 'external_id-1', 'CREATE_MAPPING'],
+          [4, 2, 'new-external_id-2', 'CREATE_MAPPING'],
+          [5, 3, 'external_id-3', 'CREATE_MAPPING']
+        )
+
+        insert_into(:example_table_external_system_mappings).values(
+          [:external_system_id, :example_table_id, :external_id, :created_at, :updated_at, :deleted_at],
+          [1, 2, 'old-external_id-2', now, now, nil]
+        )
+
+        subject.load_create_mapping
+
+        expect(:example_table_external_system_mappings).to have_values(
+          [:external_id, :example_table_id, :external_system_id, :created_at, :updated_at, :deleted_at],
+          ['external_id-1', 1, 1, now, now, nil],
+          ['new-external_id-2', 2, 1, now, now, nil],
+          ['old-external_id-2', 2, 1, now, now, now],
+          ['external_id-3', 3, 1, now, now, nil],
+        )
+
+        expect(:example_table).to have_values(
+          [:id, :updated_at, :deleted_at],
+          [3, now, nil]
         )
       end
     end
@@ -159,10 +207,15 @@ module BeetleETL
     end
 
     describe '#load_delete' do
-      it 'marks existing records as deleted' do
+      it 'marks existing records and mappings as deleted' do
         insert_into(:example_table).values(
           [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
           [1, 'external_id', external_source, 22, yesterday, yesterday, nil, 'content']
+        )
+
+        insert_into(:example_table_external_system_mappings).values(
+          [:external_id, :example_table_id, :external_system_id, :updated_at, :deleted_at],
+          ['external_id', 1, 1, nil, nil]
         )
 
         insert_into(subject.stage_table_name.to_sym).values(
@@ -176,6 +229,11 @@ module BeetleETL
           [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
           [1, 'external_id', external_source, 22, yesterday, now, now, 'content']
         )
+
+        expect(:example_table_external_system_mappings).to have_values(
+          [:external_id, :example_table_id, :external_system_id, :updated_at, :deleted_at],
+          ['external_id', 1, 1, now, now]
+        )       
       end
     end
   end
