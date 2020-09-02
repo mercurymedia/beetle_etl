@@ -40,8 +40,8 @@ module BeetleETL
           stage.external_id,
           stage.id,
           external_system.id,
-          '#{now}',
-          '#{now}'
+          '#{just_now}',
+          '#{just_now}'
         FROM "#{target_schema}"."#{stage_table_name}" stage
         LEFT JOIN "#{target_schema}"."external_systems" AS external_system ON (
           external_system.name = '#{external_source}'
