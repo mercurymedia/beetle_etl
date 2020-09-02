@@ -20,11 +20,12 @@ describe BeetleETL do
     create_tables
 
     external_source = 'source_name'
+    different_source = 'diff-source'
 
     insert_into(Sequel.qualify('my_target', 'external_systems')).values(
       [:id, :name],
       [1, external_source],
-      [2, 'different-source']
+      [2, different_source]
     )
 
     database_config_path = File.expand_path('../support/database.yml', File.dirname(__FILE__))
@@ -61,6 +62,16 @@ describe BeetleETL do
       [4, 'Audi', 'Audi Street', 'A4']
     )
 
+    insert_into(Sequel.qualify('my_target', 'organisations')).values(
+      [:id, :external_id, :external_source, :name, :address, :created_at, :updated_at, :deleted_at],
+      [99, 'diff-source-external-id', 'diff-source', 'iPhone diff source', 'diff source address', time1, nil, nil]
+    )
+    
+    insert_into(Sequel.qualify('my_target', 'organisation_external_system_mappings')).values(
+      [:external_id, :organisation_id, :external_system_id],
+      ['diff-source-external-id', organisation_id('diff-source-external-id'), 2],
+    )
+
     Timecop.freeze(time1) do
       BeetleETL.import(@config)
     end
@@ -69,7 +80,8 @@ describe BeetleETL do
       [:id, :external_id, :external_source, :name, :address, :created_at, :updated_at, :deleted_at],
       [organisation_id('Apple'), 'Apple', 'source_name', 'Apple', 'Apple Street', time1, time1, nil],
       [organisation_id('Google'), 'Google', 'source_name', 'Google', 'Google Street', time1, time1, nil],
-      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'Audi Street', time1, time1, nil]
+      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'Audi Street', time1, time1, nil],
+      [organisation_id('diff-source-external-id'), 'diff-source-external-id', 'diff-source', 'iPhone diff source', 'diff source address', time1, nil, nil]
     )
 
     expect(Sequel.qualify('my_target', 'departments')).to have_values(
@@ -84,7 +96,8 @@ describe BeetleETL do
       [:external_id, :organisation_id, :external_system_id],
       ['Apple', organisation_id('Apple'), 1],
       ['Google', organisation_id('Google'), 1],
-      ['Audi', organisation_id('Audi'), 1]
+      ['Audi', organisation_id('Audi'), 1],
+      ['diff-source-external-id', organisation_id('diff-source-external-id'), 2]
     )
 
     expect(Sequel.qualify('my_target', 'department_external_system_mappings')).to have_values(
@@ -107,6 +120,8 @@ describe BeetleETL do
       [3, 'Google', 'NEW Google Street', 'Google+']
       # [ 4        , 'Audi'   , 'Audi Street'       , 'A4'       ] ,
     )
+    
+    
 
     Timecop.freeze(time2) do
       BeetleETL.import(@config)
@@ -116,7 +131,8 @@ describe BeetleETL do
       [:id, :external_id, :external_source, :name, :address, :created_at, :updated_at, :deleted_at],
       [organisation_id('Apple'), 'Apple', 'source_name', 'Apple', 'Apple Street', time1, time1, nil],
       [organisation_id('Google'), 'Google', 'source_name', 'Google', 'NEW Google Street', time1, time2, nil],
-      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'Audi Street', time1, time2, time2]
+      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'Audi Street', time1, time2, time2],
+      [organisation_id('diff-source-external-id'), 'diff-source-external-id', 'diff-source', 'iPhone diff source', 'diff source address', time1, nil, nil]
     )
 
     expect(Sequel.qualify('my_target', 'departments')).to have_values(
@@ -131,7 +147,8 @@ describe BeetleETL do
       [:external_id, :organisation_id, :external_system_id],
       ['Apple', organisation_id('Apple'), 1],
       ['Google', organisation_id('Google'), 1],
-      ['Audi', organisation_id('Audi'), 1]
+      ['Audi', organisation_id('Audi'), 1],
+      ['diff-source-external-id', organisation_id('diff-source-external-id'), 2]
     )
 
     expect(Sequel.qualify('my_target', 'department_external_system_mappings')).to have_values(
@@ -163,7 +180,8 @@ describe BeetleETL do
       [:id, :external_id, :external_source, :name, :address, :created_at, :updated_at, :deleted_at],
       [organisation_id('Apple'), 'Apple', 'source_name', 'Apple', 'Apple Street', time1, time1, nil],
       [organisation_id('Google'), 'Google', 'source_name', 'Google', 'NEW Google Street', time1, time2, nil],
-      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'NEW Audi Street', time1, time3, nil]
+      [organisation_id('Audi'), 'Audi', 'source_name', 'Audi', 'NEW Audi Street', time1, time3, nil],
+      [organisation_id('diff-source-external-id'), 'diff-source-external-id', 'diff-source', 'iPhone diff source', 'diff source address', time1, nil, nil]
     )
 
     expect(Sequel.qualify('my_target', 'departments')).to have_values(
@@ -178,7 +196,8 @@ describe BeetleETL do
       [:external_id, :organisation_id, :external_system_id],
       ['Apple', organisation_id('Apple'), 1],
       ['Google', organisation_id('Google'), 1],
-      ['Audi', organisation_id('Audi'), 1]
+      ['Audi', organisation_id('Audi'), 1],
+      ['diff-source-external-id', organisation_id('diff-source-external-id'), 2]
     )
 
     expect(Sequel.qualify('my_target', 'department_external_system_mappings')).to have_values(
