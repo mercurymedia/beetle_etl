@@ -1,10 +1,9 @@
 module BeetleETL
   class Load < Step
-
     IMPORTER_COLUMNS = %i[
       external_source
       transition
-    ]
+    ].freeze
 
     def initialize(config, table_name, relations)
       super(config, table_name)
@@ -12,7 +11,7 @@ module BeetleETL
     end
 
     def run
-      %w(create update delete).each do |transition|
+      %w[create update delete].each do |transition|
         public_send(:"load_#{transition}")
       end
     end
@@ -33,7 +32,21 @@ module BeetleETL
           '#{just_now}',
           '#{just_now}'
         FROM "#{target_schema}"."#{stage_table_name}"
-        WHERE transition = 'CREATE'
+        WHERE transition = 'CREATE';
+
+        INSERT INTO "#{target_schema}"."#{mappings_table_name}"
+          (external_id, #{mapped_foreign_key_column}, external_system_id, created_at, updated_at)
+        SELECT
+          stage.external_id,
+          stage.id,
+          external_system.id,
+          '#{just_now}',
+          '#{just_now}'
+        FROM "#{target_schema}"."#{stage_table_name}" stage
+        LEFT JOIN "#{target_schema}"."external_systems" AS external_system ON (
+          external_system.name = '#{external_source}'
+        )
+        WHERE stage.transition = 'CREATE';
       SQL
     end
 
@@ -41,7 +54,7 @@ module BeetleETL
       database.execute <<-SQL
         UPDATE "#{target_schema}"."#{table_name}" target
         SET
-          #{updatable_columns.map { |c| %Q("#{c}" = stage."#{c}") }.join(',')},
+          #{updatable_columns.map { |c| %("#{c}" = stage."#{c}") }.join(',')},
           "updated_at" = '#{now}',
           deleted_at = NULL
         FROM "#{target_schema}"."#{stage_table_name}" stage
@@ -87,6 +100,5 @@ module BeetleETL
     def now
       Time.now
     end
-
   end
 end

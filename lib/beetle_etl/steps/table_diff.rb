@@ -1,17 +1,16 @@
 module BeetleETL
   class TableDiff < Step
-
     IMPORTER_COLUMNS = %i[
       external_id
       transition
-    ]
+    ].freeze
 
     def dependencies
       [MapRelations.step_name(table_name)].to_set
     end
 
     def run
-      %w(create update delete reinstate keep).each do |transition|
+      %w[create update delete reinstate keep].each do |transition|
         public_send(:"transition_#{transition}")
       end
     end
@@ -23,12 +22,15 @@ module BeetleETL
           transition = 'CREATE',
           id = NEXTVAL('#{target_schema}.#{table_name}_id_seq')
         FROM "#{target_schema}"."#{stage_table_name}" stage
-        LEFT JOIN "#{target_schema}"."#{table_name}" target ON (
-          target.external_id = stage.external_id
-          AND target.external_source = '#{external_source}'
+        LEFT JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+          mapping.external_id = stage.external_id
+        )
+        LEFT JOIN "#{target_schema}"."external_systems" AS external_system ON (
+          external_system.name = '#{external_source}'
+          AND mapping.external_system_id = external_system.id
         )
         WHERE stage_update.external_id = stage.external_id
-          AND target.external_id IS NULL
+          AND mapping.external_id IS NULL
       SQL
     end
 
@@ -39,9 +41,15 @@ module BeetleETL
           transition = 'UPDATE',
           id = target.id
         FROM "#{target_schema}"."#{stage_table_name}" stage
+        JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+          mapping.external_id = stage.external_id
+        )
+        JOIN "#{target_schema}"."external_systems" AS external_system ON (
+          external_system.name = '#{external_source}'
+          AND mapping.external_system_id = external_system.id
+        )
         JOIN "#{target_schema}"."#{table_name}" target ON (
-          target.external_id = stage.external_id
-          AND target.external_source = '#{external_source}'
+          target.id = mapping."#{mapped_foreign_key_column}"
           AND target.deleted_at IS NULL
           AND
             (#{target_record_columns.join(', ')})
@@ -53,18 +61,25 @@ module BeetleETL
     end
 
     def transition_delete
-      database.execute <<-SQL
+      database.execute <<~SQL
         INSERT INTO "#{target_schema}"."#{stage_table_name}"
           (transition, id)
-        SELECT
-          'DELETE',
-          target.id
-        FROM "#{target_schema}"."#{table_name}" target
-        LEFT OUTER JOIN "#{target_schema}"."#{stage_table_name}" stage
-          ON (stage.external_id = target.external_id)
-        WHERE stage.external_id IS NULL
-        AND target.external_source = '#{external_source}'
-        AND target.deleted_at IS NULL
+          SELECT
+            'DELETE',
+            target.id
+          FROM "#{target_schema}"."#{table_name}" target
+          JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+            mapping."#{mapped_foreign_key_column}" = target.id
+          )
+          JOIN "#{target_schema}"."external_systems" AS external_system ON (
+            external_system.name = '#{external_source}'
+            AND mapping.external_system_id = external_system.id
+          )
+          LEFT OUTER JOIN "#{target_schema}"."#{stage_table_name}" AS stage ON (
+            stage.external_id = mapping.external_id
+          )
+          WHERE stage.external_id IS NULL
+          AND target.deleted_at IS NULL
       SQL
     end
 
@@ -75,9 +90,15 @@ module BeetleETL
           transition = 'REINSTATE',
           id = target.id
         FROM "#{target_schema}"."#{stage_table_name}" stage
+        JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+          mapping.external_id = stage.external_id
+        )
+        JOIN "#{target_schema}"."external_systems" AS external_system ON (
+          external_system.name = '#{external_source}'
+          AND mapping.external_system_id = external_system.id
+        )
         JOIN "#{target_schema}"."#{table_name}" target ON (
-          target.external_id = stage.external_id
-          AND target.external_source = '#{external_source}'
+          target.id = mapping."#{mapped_foreign_key_column}"
           AND target.deleted_at IS NOT NULL
         )
         WHERE stage_update.external_id = stage.external_id
@@ -91,9 +112,15 @@ module BeetleETL
           transition = 'KEEP',
           id = target.id
         FROM "#{target_schema}"."#{stage_table_name}" stage
+        JOIN "#{target_schema}"."#{mappings_table_name}" AS mapping ON (
+          mapping.external_id = stage.external_id
+        )
+        JOIN "#{target_schema}"."external_systems" AS external_system ON (
+          external_system.name = '#{external_source}'
+          AND mapping.external_system_id = external_system.id
+        )
         JOIN "#{target_schema}"."#{table_name}" target ON (
-          target.external_id = stage.external_id
-          AND target.external_source = '#{external_source}'
+          target.id = mapping."#{mapped_foreign_key_column}"
           AND target.deleted_at IS NULL
           AND
             (#{target_record_columns.join(', ')})
@@ -133,8 +160,7 @@ module BeetleETL
     end
 
     def prefixed_columns(columns, prefix)
-      columns.map { |column| %Q("#{prefix}"."#{column}") }
+      columns.map { |column| %("#{prefix}"."#{column}") }
     end
-
   end
 end
