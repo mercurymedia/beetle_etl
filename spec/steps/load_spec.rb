@@ -36,8 +36,6 @@ module BeetleETL
 
       test_database.create_table(:example_table) do
         primary_key :id
-        String :external_id, size: 255
-        String :external_source, size: 255
         DateTime :created_at
         DateTime :updated_at
         DateTime :deleted_at
@@ -105,9 +103,9 @@ module BeetleETL
         subject.load_create
 
         expect(:example_table).to have_values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [3, 'external_id-1', external_source, 22, now, now, nil, 'content'],
-          [4, 'external_id-2', external_source, 22, now, now, nil, 'content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [3, 22, now, now, nil, 'content'],
+          [4, 22, now, now, nil, 'content']
         )
 
         expect(:example_table_external_system_mappings).to have_values(
@@ -121,8 +119,8 @@ module BeetleETL
     describe '#load_update' do
       it 'updates existing records' do
         insert_into(:example_table).values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 22, yesterday, yesterday, nil, 'content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 22, yesterday, yesterday, nil, 'content']
         )
 
         insert_into(subject.stage_table_name.to_sym).values(
@@ -133,15 +131,15 @@ module BeetleETL
         subject.load_update
 
         expect(:example_table).to have_values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 33, yesterday, now, nil, 'updated content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 33, yesterday, now, nil, 'updated content']
         )
       end
 
       it 'restores deleted records' do
         insert_into(:example_table).values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 22, yesterday, yesterday, nil, 'content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 22, yesterday, yesterday, nil, 'content']
         )
 
         insert_into(subject.stage_table_name.to_sym).values(
@@ -152,8 +150,8 @@ module BeetleETL
         subject.load_update
 
         expect(:example_table).to have_values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 33, yesterday, now, nil, 'updated content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 33, yesterday, now, nil, 'updated content']
         )
       end
     end
@@ -161,8 +159,8 @@ module BeetleETL
     describe '#load_delete' do
       it 'marks existing records as deleted' do
         insert_into(:example_table).values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 22, yesterday, yesterday, nil, 'content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 22, yesterday, yesterday, nil, 'content']
         )
 
         insert_into(subject.stage_table_name.to_sym).values(
@@ -173,8 +171,8 @@ module BeetleETL
         subject.load_delete
 
         expect(:example_table).to have_values(
-          [:id, :external_id, :external_source, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
-          [1, 'external_id', external_source, 22, yesterday, now, now, 'content']
+          [:id, :foo_id, :created_at, :updated_at, :deleted_at, :payload],
+          [1, 22, yesterday, now, now, 'content']
         )
       end
     end

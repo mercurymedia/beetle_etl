@@ -25,10 +25,9 @@ module BeetleETL
 
       database.execute <<-SQL
         INSERT INTO "#{target_schema}"."#{table_name}"
-          (#{data_columns.join(', ')}, external_source, created_at, updated_at)
+          (#{data_columns.join(', ')}, created_at, updated_at)
         SELECT
           #{data_columns.join(', ')},
-          '#{external_source}',
           '#{just_now}',
           '#{just_now}'
         FROM "#{target_schema}"."#{stage_table_name}"
@@ -90,7 +89,7 @@ module BeetleETL
     def ignored_columns
       IMPORTER_COLUMNS + table_columns.select do |column_name|
         column_name.to_s.index(/^external_.+_id$/)
-      end
+      end + [:external_id]
     end
 
     def updatable_columns

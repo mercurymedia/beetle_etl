@@ -29,8 +29,6 @@ module BeetleETL
 
       test_database.create_table(:example_table) do
         primary_key :id
-        String :external_id, size: 255
-        String :external_source, size: 255
         DateTime :deleted_at
 
         String :payload, size: 255
