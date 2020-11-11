@@ -3,6 +3,7 @@ module BeetleETL
     IMPORTER_COLUMNS = %i[
       external_source
       transition
+      external_id
     ].freeze
 
     def initialize(config, table_name, relations)
@@ -89,7 +90,7 @@ module BeetleETL
     def ignored_columns
       IMPORTER_COLUMNS + table_columns.select do |column_name|
         column_name.to_s.index(/^external_.+_id$/)
-      end + [:external_id]
+      end
     end
 
     def updatable_columns
