@@ -3,6 +3,7 @@ module BeetleETL
     IMPORTER_COLUMNS = %i[
       external_source
       transition
+      external_id
     ].freeze
 
     def initialize(config, table_name, relations)
@@ -25,10 +26,9 @@ module BeetleETL
 
       database.execute <<-SQL
         INSERT INTO "#{target_schema}"."#{table_name}"
-          (#{data_columns.join(', ')}, external_source, created_at, updated_at)
+          (#{data_columns.join(', ')}, created_at, updated_at)
         SELECT
           #{data_columns.join(', ')},
-          '#{external_source}',
           '#{just_now}',
           '#{just_now}'
         FROM "#{target_schema}"."#{stage_table_name}"

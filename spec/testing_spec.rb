@@ -32,13 +32,11 @@ describe "BeetleETL:Testing" do
     before do
       test_database.create_table :some_table do
         primary_key :id
-        String :external_id, size: 255
         String :some_attribute, size: 255
       end
 
       test_database.create_table :organisations do
         primary_key :id
-        String :external_id, size: 255
         String :name, size: 255
         String :address, size: 255
       end

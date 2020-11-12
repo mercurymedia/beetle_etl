@@ -29,8 +29,6 @@ module ExampleSchema
 
     test_database.create_table Sequel.qualify('my_target', 'organisations') do
       primary_key :id
-      String :external_id, size: 255
-      String :external_source, size: 255
       String :name, size: 255
       String :address, size: 255
       DateTime :created_at
@@ -40,8 +38,6 @@ module ExampleSchema
 
     test_database.create_table Sequel.qualify('my_target', 'departments') do
       primary_key :id
-      String :external_id, size: 255
-      String :external_source, size: 255
       String :name, size: 255
       foreign_key :organisation_id, Sequel.qualify('my_target', 'organisations')
       DateTime :created_at

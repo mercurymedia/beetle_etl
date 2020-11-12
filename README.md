@@ -25,7 +25,19 @@ Or install it yourself as:
 
 ## Setup
 
-Make sure the tables you want to import contain columns named ```external_id``` and ```external_source``` of type ```CHARACTER VARYING(255)```, as well as timestamp columns named ```created_at```, ```updated_at``` and, ```deleted_at```.
+Make sure the tables you want to import contain timestamp columns named ```created_at```, ```updated_at``` and, ```deleted_at```.
+
+It is necessary to have a table named ```external_systems```, containing the columns:
+
+- ```name``` of type ```CHARACTER VARYING(255)```
+
+The external systems table must contain an entry with the same name as the ```source``` that is going to be defined in the configuration, eg.: ```important_data```.
+
+Make sure that for each table you want to import you have a corresponding mappings table named as ```<singularized_name_of_the_table_to import>_external_system_mappings```, eg.: ```department_external_system_mappings```, containing the columns:
+
+- ```<singularized_name_of_the_table_to_import>_id``` which references the id of the table to import, eg.: ```department_id```;
+- ```external_id``` of type ```CHARACTER VARYING(255)```;
+- ```external_system_id``` which references the id of the external systems table.
 
 ## Usage
 
